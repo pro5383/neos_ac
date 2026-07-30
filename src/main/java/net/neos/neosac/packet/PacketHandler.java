@@ -151,6 +151,7 @@ public class PacketHandler {
             if (cur != null && prev != null && cur.getWorld() != null
                     && cur.getWorld().equals(prev.getWorld())) {
                 data.pushDeltaY(cur.getY() - prev.getY());
+                data.pushHorizontalDelta(cur.getX() - prev.getX(), cur.getZ() - prev.getZ());
             }
 
             if (flying.isOnGround()) {

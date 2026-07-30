@@ -43,6 +43,10 @@ public class PlayerListener implements Listener {
         if (vc instanceof net.neos.neosac.checks.simulation.VehicleCheck vehicleCheck) {
             vehicleCheck.clear(player.getUniqueId());
         }
+        var sc = plugin.getCheckManager().getCheck("Simulation");
+        if (sc instanceof net.neos.neosac.checks.simulation.SimulationCheck simulationCheck) {
+            simulationCheck.clear(player.getUniqueId());
+        }
         plugin.getExemptionManager().remove(player.getUniqueId());
         plugin.getAlertManager().toggleAlerts(player.getUniqueId());
         if (plugin.getAlertManager().hasAlerts(player.getUniqueId())) {
@@ -59,7 +63,6 @@ public class PlayerListener implements Listener {
         data.setCurrentLocation(event.getTo());
         data.setLastSetbackLocation(event.getTo());
         data.setLastSetbackTime(System.currentTimeMillis());
-        data.getPhysics().reset(event.getTo());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -69,7 +72,6 @@ public class PlayerListener implements Listener {
         data.setCurrentLocation(event.getRespawnLocation());
         data.setLastSetbackLocation(event.getRespawnLocation());
         data.setLastSetbackTime(System.currentTimeMillis());
-        data.getPhysics().reset(event.getRespawnLocation());
         data.resetAllViolations();
     }
 
@@ -80,7 +82,6 @@ public class PlayerListener implements Listener {
         data.setCurrentLocation(event.getPlayer().getLocation());
         data.setLastSetbackLocation(event.getPlayer().getLocation());
         data.setLastSetbackTime(System.currentTimeMillis());
-        data.getPhysics().reset(event.getPlayer().getLocation());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

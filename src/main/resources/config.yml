@@ -31,10 +31,10 @@ prevent-setback-spam: true
 #   ban %player% %reason%                              (vanilla)
 #   tempban %player% 7d %reason%                       (Essentials)
 #   ban %player% %reason% --builder=server             (LiteBans)
-ban-command: "ban %player% %reason%"
+ban-command: "tempban %player% 1d %reason%"
 
 # Текст причины бана (поддерживает плейсхолдер %check%)
-ban-reason: "[NeosAC] Обнаружено использование читов (%check%)"
+ban-reason: "Использование читов"
 
 # Выполнять команду бана через консоль (рекомендуется true)
 ban-by-console: true
@@ -57,7 +57,7 @@ checks:
   simulation:
     enabled: true
     max-violations: 15.0
-    setback-violations: 5.0
+    setback-violations: 2.0
     ban-violations: 25.0
 
   nofall:
@@ -65,18 +65,6 @@ checks:
     max-violations: 10.0
     setback-violations: 5.0
     ban-violations: 20.0
-
-  speed:
-    enabled: true
-    max-violations: 10.0
-    setback-violations: 5.0
-    ban-violations: 20.0
-
-  flight:
-    enabled: true
-    max-violations: 8.0
-    setback-violations: 3.0
-    ban-violations: 15.0
 
   # --- Packet ---
   packetorder:

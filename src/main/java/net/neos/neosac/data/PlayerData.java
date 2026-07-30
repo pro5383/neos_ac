@@ -2,7 +2,6 @@ package net.neos.neosac.data;
 
 import net.neos.neosac.NeosAC;
 import net.neos.neosac.check.Check;
-import net.neos.neosac.physics.MinecraftPhysics;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -16,7 +15,6 @@ public class PlayerData {
     private final NeosAC plugin;
     private final UUID uuid;
     private final Player player;
-    private final MinecraftPhysics physics;
 
     private final Map<String, Double> violations = new ConcurrentHashMap<>();
     private final Map<String, Long> lastViolationTime = new ConcurrentHashMap<>();
@@ -74,10 +72,14 @@ public class PlayerData {
     private volatile boolean gliding;
     private volatile boolean riptiding;
 
-    private volatile double simulatedY;
-    private volatile double lastSimulatedY;
     private volatile double deltaY;
     private volatile double lastDeltaY;
+    private volatile double deltaX;
+    private volatile double deltaZ;
+    private volatile double lastDeltaX;
+    private volatile double lastDeltaZ;
+    private volatile double deltaXZ;
+    private volatile double lastDeltaXZ;
     private volatile int airTicks;
     private volatile int groundTicks;
     private volatile double totalFallDistance;
@@ -98,7 +100,6 @@ public class PlayerData {
         this.plugin = plugin;
         this.uuid = player.getUniqueId();
         this.player = player;
-        this.physics = new MinecraftPhysics(plugin, this);
         this.currentLocation = player.getLocation().clone();
         this.lastLocation = player.getLocation().clone();
         this.lastSetbackLocation = player.getLocation().clone();
@@ -145,10 +146,6 @@ public class PlayerData {
 
     public Player getPlayer() {
         return player;
-    }
-
-    public MinecraftPhysics getPhysics() {
-        return physics;
     }
 
     public Location getCurrentLocation() {
@@ -473,19 +470,6 @@ public class PlayerData {
         this.riptiding = riptiding;
     }
 
-    public double getSimulatedY() {
-        return simulatedY;
-    }
-
-    public void setSimulatedY(double simulatedY) {
-        this.lastSimulatedY = this.simulatedY;
-        this.simulatedY = simulatedY;
-    }
-
-    public double getLastSimulatedY() {
-        return lastSimulatedY;
-    }
-
     public double getDeltaY() {
         return deltaY;
     }
@@ -497,6 +481,86 @@ public class PlayerData {
 
     public double getLastDeltaY() {
         return lastDeltaY;
+    }
+
+    public void pushHorizontalDelta(double dx, double dz) {
+        this.lastDeltaX = this.deltaX;
+        this.lastDeltaZ = this.deltaZ;
+        this.lastDeltaXZ = this.deltaXZ;
+        this.deltaX = dx;
+        this.deltaZ = dz;
+        this.deltaXZ = Math.sqrt(dx * dx + dz * dz);
+    }
+
+    public double getDeltaX() {
+        return deltaX;
+    }
+
+    public double getDeltaZ() {
+        return deltaZ;
+    }
+
+    public double getLastDeltaX() {
+        return lastDeltaX;
+    }
+
+    public double getLastDeltaZ() {
+        return lastDeltaZ;
+    }
+
+    public double getDeltaXZ() {
+        return deltaXZ;
+    }
+
+    public double getLastDeltaXZ() {
+        return lastDeltaXZ;
+    }
+
+    /** Уровень эффекта зелья (0 если нет). Амплитуда 0 → уровень 1. */
+    public int getPotionLevel(org.bukkit.potion.PotionEffectType type) {
+        if (player == null) return 0;
+        org.bukkit.potion.PotionEffect effect = player.getPotionEffect(type);
+        return effect != null ? effect.getAmplifier() + 1 : 0;
+    }
+
+    public boolean hasPotionEffect(org.bukkit.potion.PotionEffectType type) {
+        return getPotionLevel(type) > 0;
+    }
+
+    public float getWalkSpeed() {
+        return player != null ? player.getWalkSpeed() / 2.0F : 0.1F;
+    }
+
+    public double getX() {
+        return currentLocation != null ? currentLocation.getX() : 0.0;
+    }
+
+    public double getY() {
+        return currentLocation != null ? currentLocation.getY() : 0.0;
+    }
+
+    public double getZ() {
+        return currentLocation != null ? currentLocation.getZ() : 0.0;
+    }
+
+    public float getYaw() {
+        return currentYaw;
+    }
+
+    public float getPitch() {
+        return currentPitch;
+    }
+
+    /** Есть ли твёрдый блок прямо над головой игрока (для head-hit логики). */
+    public boolean isUnderBlock() {
+        Location loc = currentLocation;
+        if (loc == null || loc.getWorld() == null) return false;
+        try {
+            org.bukkit.block.Block above = loc.clone().add(0, 2.0, 0).getBlock();
+            return above.getType().isSolid();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public int getAirTicks() {
@@ -583,6 +647,12 @@ public class PlayerData {
         this.currentLocation = loc.clone();
         this.deltaY = 0;
         this.lastDeltaY = 0;
+        this.deltaX = 0;
+        this.deltaZ = 0;
+        this.lastDeltaX = 0;
+        this.lastDeltaZ = 0;
+        this.deltaXZ = 0;
+        this.lastDeltaXZ = 0;
     }
 
     public boolean wasInVehicle() {

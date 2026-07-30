@@ -9,10 +9,8 @@ import net.neos.neosac.checks.interaction.ReachCheck;
 import net.neos.neosac.checks.packet.BadPacketsA;
 import net.neos.neosac.checks.packet.PacketOrderCheck;
 import net.neos.neosac.checks.packet.TimerCheck;
-import net.neos.neosac.checks.simulation.FlightCheck;
 import net.neos.neosac.checks.simulation.NoFallCheck;
 import net.neos.neosac.checks.simulation.SimulationCheck;
-import net.neos.neosac.checks.simulation.SpeedCheck;
 import net.neos.neosac.checks.simulation.VehicleCheck;
 import net.neos.neosac.checks.world.FastBreakCheck;
 import net.neos.neosac.checks.world.FastPlaceCheck;
@@ -36,8 +34,6 @@ public class CheckManager {
     public void registerDefaults() {
         register(new SimulationCheck(plugin));
         register(new NoFallCheck(plugin));
-        register(new SpeedCheck(plugin));
-        register(new FlightCheck(plugin));
         register(new VehicleCheck(plugin));
 
         register(new PacketOrderCheck(plugin));

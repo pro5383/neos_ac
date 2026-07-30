@@ -33,7 +33,6 @@ public class SetbackManager {
         data.requestSetback();
 
         data.resetLocationTo(safe);
-        data.getPhysics().reset(safe);
 
         plugin.getAlertManager().setbackAlert(player, check, detail);
 
