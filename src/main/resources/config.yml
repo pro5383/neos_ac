@@ -1,0 +1,155 @@
+# ============================================================
+#  NeosAC - Конфигурация
+#  Промышленный анти-чит для Minecraft Spigot 1.21.4+
+#  https://github.com/neos/NeosAC
+# ============================================================
+
+# --- Общие настройки ---
+# Подробный режим алертов (с дополнительной информацией: пинг, TPS, координаты)
+verbose: false
+
+# Оповещать всех модераторов о setback'ах
+broadcast-setbacks: false
+
+# Записывать нарушения в файл logs/violations-YYYY-MM-DD.log
+log-to-file: true
+
+# Максимальный размер одного лог-файла (в МБ), после чего он ротируется
+max-log-size-mb: 10
+
+# --- Настройки наказаний ---
+# Cooldown между setback'ами (в ms), чтобы избежать спама
+setback-cooldown-ms: 500
+
+# Защита от спама setback'ов (только один setback за cooldown)
+prevent-setback-spam: true
+
+# Команда для бана. Поддерживает плейсхолдеры:
+#   %player% - имя игрока
+#   %reason% - причина (см. ниже)
+# Примеры:
+#   ban %player% %reason%                              (vanilla)
+#   tempban %player% 7d %reason%                       (Essentials)
+#   ban %player% %reason% --builder=server             (LiteBans)
+ban-command: "ban %player% %reason%"
+
+# Текст причины бана (поддерживает плейсхолдер %check%)
+ban-reason: "[NeosAC] Обнаружено использование читов (%check%)"
+
+# Выполнять команду бана через консоль (рекомендуется true)
+ban-by-console: true
+
+# Интервал очистки данных offline-игроков (в секундах)
+cleanup-interval-seconds: 60
+
+# ============================================================
+#  Настройки проверок
+# ============================================================
+# Каждую проверку можно настроить индивидуально:
+#   enabled: true/false                - включена ли проверка
+#   max-violations: 10.0               - максимальный порог срабатывания
+#   setback-violations: 5.0            - порог для отката позиции
+#   ban-violations: 20.0               - порог для автоматического бана
+
+checks:
+
+  # --- Simulation / Physics ---
+  simulation:
+    enabled: true
+    max-violations: 15.0
+    setback-violations: 5.0
+    ban-violations: 25.0
+
+  nofall:
+    enabled: true
+    max-violations: 10.0
+    setback-violations: 5.0
+    ban-violations: 20.0
+
+  speed:
+    enabled: true
+    max-violations: 10.0
+    setback-violations: 5.0
+    ban-violations: 20.0
+
+  flight:
+    enabled: true
+    max-violations: 8.0
+    setback-violations: 3.0
+    ban-violations: 15.0
+
+  # --- Packet ---
+  packetorder:
+    enabled: true
+    max-violations: 15.0
+    setback-violations: 8.0
+    ban-violations: 30.0
+
+  timer:
+    enabled: true
+    max-violations: 10.0
+    setback-violations: 5.0
+    ban-violations: 20.0
+
+  badpacketsa:
+    enabled: true
+    max-violations: 5.0
+    setback-violations: 2.0
+    ban-violations: 10.0
+
+  # --- Interaction ---
+  raytraceinteract:
+    enabled: true
+    max-violations: 10.0
+    setback-violations: 5.0
+    ban-violations: 20.0
+
+  reach:
+    enabled: true
+    max-violations: 10.0
+    setback-violations: 5.0
+    ban-violations: 20.0
+
+  # --- Combat ---
+  attackreach:
+    enabled: true
+    max-violations: 10.0
+    setback-violations: 5.0
+    ban-violations: 20.0
+
+  killaurarotation:
+    enabled: true
+    max-violations: 12.0
+    setback-violations: 6.0
+    ban-violations: 25.0
+
+  criticals:
+    enabled: true
+    max-violations: 10.0
+    setback-violations: 5.0
+    ban-violations: 20.0
+
+  # --- World ---
+  nuker:
+    enabled: true
+    max-violations: 5.0
+    setback-violations: 2.0
+    ban-violations: 10.0
+
+  fastbreak:
+    enabled: true
+    max-violations: 8.0
+    setback-violations: 4.0
+    ban-violations: 15.0
+
+  fastplace:
+    enabled: true
+    max-violations: 8.0
+    setback-violations: 4.0
+    ban-violations: 15.0
+
+  wrongblock:
+    enabled: true
+    max-violations: 10.0
+    setback-violations: 5.0
+    ban-violations: 20.0

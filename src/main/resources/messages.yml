@@ -1,0 +1,41 @@
+# NeosAC Messages
+# All messages are configurable. Color codes via &
+
+# Prefix
+prefix: "&8[&cNeosAC&8] &r"
+
+# Normal alert
+# Placeholders: %player%, %check%, %vlevel%, %detail%
+alert: "%prefix%&c%player% &7сработал &e%check% &7(&cV:%vlevel%&7) &8| &f%detail%"
+
+# Verbose alert (with ping/TPS)
+# Placeholders: %player%, %check%, %vlevel%, %detail%, %ping%, %tps%
+alert-verbose: "%prefix%&c%player% &7сработал &e%check% &7(&cV:%vlevel%&7) &8| &f%detail% &8| &7ping: %ping%ms &8| &7tps: %tps%"
+
+# Setback notification (moderators)
+setback: "%prefix%&c%player% &7вернул(а) позицию: &f%check%"
+
+# Ban notification (moderators)
+ban: "%prefix%&c%player% &7забанен за &f%check% &7(&cV:%vlevel%&7)"
+
+# System messages
+no-permission: "%prefix%&cУ вас нет прав для этой команды."
+unknown-command: "%prefix%&cНеизвестная команда. Используйте &f/neosac help"
+player-only: "%prefix%&cЭта команда только для игроков."
+player-not-found: "%prefix%&cИгрок не найден."
+config-reloaded: "%prefix%&aКонфигурация перезагружена."
+violations-reset: "%prefix%&aНарушения для &f%player% &aсброшены."
+verbose-enabled: "%prefix%&aПодробные алерты включены."
+verbose-disabled: "%prefix%&cПодробные алерты выключены."
+
+# Help
+help-header: "&8&m==========&r &cNeosAC &7Помощь &8&m=========="
+help-line: "&c/%command% &7- %description%"
+help-footer: "&8&m==============================="
+
+# Player info
+info-line: "&7Игрок: &f%player% &8| &7Нарушений: &c%violations%"
+
+# Checks list
+checks-header: "&8&m==========&r &cNeosAC &7Проверки &8&m=========="
+check-line: "&e%check% &8(&7%type%&8) &7- %description% &8| &a%status%"

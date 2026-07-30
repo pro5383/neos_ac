@@ -1,0 +1,38 @@
+name: NeosAC
+version: ${version}
+main: net.neos.neosac.NeosAC
+api-version: '1.21'
+author: Neos Team
+description: Промышленный анти-чит для Minecraft Spigot 1.21.4+. Simulation/Physics, PacketOrder, RaytraceInteract.
+website: https://github.com/neos/NeosAC
+softdepend:
+  - packetevents
+  - ProtocolLib
+commands:
+  neosac:
+    description: Главная команда NeosAC
+    usage: /neosac <help|reload|info|verbose|reset|checks>
+    aliases: [nac, neos]
+    permission: neosac.admin
+  neosacalerts:
+    description: Включить/выключить алерты нарушений
+    usage: /neosacalerts
+    aliases: [nacalerts, alerts]
+    permission: neosac.alerts
+permissions:
+  neosac.*:
+    description: Полный доступ к NeosAC
+    default: op
+    children:
+      neosac.admin: true
+      neosac.alerts: true
+      neosac.bypass: true
+  neosac.admin:
+    description: Доступ к администрированию
+    default: op
+  neosac.alerts:
+    description: Получение алертов о нарушениях
+    default: op
+  neosac.bypass:
+    description: Обход проверок NeosAC
+    default: false
