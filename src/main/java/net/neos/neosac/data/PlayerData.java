@@ -56,6 +56,7 @@ public class PlayerData {
 
     private volatile long lastBlockBreak;
     private volatile long lastBlockPlace;
+    private volatile long lastFireworkUse;
     private volatile int blocksBrokenThisTick;
     private volatile int blocksPlacedThisTick;
     private volatile Location lastBrokenBlock;
@@ -351,6 +352,14 @@ public class PlayerData {
 
     public void setLastBlockPlace(long lastBlockPlace) {
         this.lastBlockPlace = lastBlockPlace;
+    }
+
+    public long getLastFireworkUse() {
+        return lastFireworkUse;
+    }
+
+    public void setLastFireworkUse(long lastFireworkUse) {
+        this.lastFireworkUse = lastFireworkUse;
     }
 
     public int getBlocksBrokenThisTick() {

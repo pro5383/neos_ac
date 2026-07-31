@@ -6,6 +6,7 @@ import net.neos.neosac.check.Check;
 import net.neos.neosac.check.CheckType;
 import net.neos.neosac.data.PlayerData;
 import net.neos.neosac.packet.PacketAware;
+import net.neos.neosac.physics.ElytraPredictor;
 import net.neos.neosac.physics.PhysicsConstants;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -29,13 +30,24 @@ import java.util.concurrent.ConcurrentHashMap;
  * ложные срабатывания на одиночном сетевом шуме.
  * <p>
  * Заменяет вертикальные (Fly / Hover / AirJump / Glide) и горизонтальные
- * (Speed / Bhop / Strafe / NoSlow) читы одним связным движком.
+ * (Speed / Bhop / Strafe / NoSlow) читы одним связным движком. Полёт на элитрах
+ * покрывается отдельной ванильной моделью fall-flying (ElytraFly / ElytraSpeed / Hover).
  */
 public class SimulationCheck extends Check implements PacketAware {
 
     // ─── Пороги флагов ─────────────────────────────────────────────────────────
     private static final float VERTICAL_FLAG_THRESHOLD   = 0.75F;
     private static final float HORIZONTAL_FLAG_THRESHOLD  = 1.0F;
+    private static final float ELYTRA_FLAG_THRESHOLD      = 1.5F;
+
+    // ─── Элитры ──────────────────────────────────────────────────────────────
+    // Грация после активации фейерверка (импульс к взгляду живёт несколько секунд).
+    private static final long   ELYTRA_FIREWORK_GRACE_MS = 2500L;
+    // Первые тики после взлёта реконструкция скорости шумит — не проверяем.
+    private static final int    ELYTRA_WARMUP_TICKS   = 3;
+    // После схода с элитр горизонтальный/вертикальный импульс гасится ещё десятки тиков —
+    // пока он распадается (скорость не растёт), обычные проверки Speed/Fly не применяем.
+    private static final int    ELYTRA_RELEASE_GRACE_TICKS = 30;
 
     // ─── Горизонталь ───────────────────────────────────────────────────────────
     private static final double SPRINT_JUMP_BOOST = PhysicsConstants.SPRINT_JUMP_BOOST;
@@ -85,6 +97,14 @@ public class SimulationCheck extends Check implements PacketAware {
         int    lastStrafe;
         int    sprintJumpTick = -999;
         int    tickCounter;
+        // Элитры
+        final ElytraPredictor elytraPredictor = new ElytraPredictor();
+        float   elytraBuffer;
+        int     elytraTicks;
+        boolean wasGliding;
+        int     glideReleaseTick = -9999;
+        double  elytraEnergyPrev;
+        int     elytraLevelTicks;
     }
 
     private final Map<UUID, State> states = new ConcurrentHashMap<>();
@@ -108,7 +128,7 @@ public class SimulationCheck extends Check implements PacketAware {
         if (!current.getWorld().equals(last.getWorld())) return;
 
         // Ситуации, которые ванильный движок предсказания не покрывает — не проверяем.
-        if (player.isGliding() || player.isInsideVehicle() || player.isRiptiding() || player.isFlying()) {
+        if (player.isInsideVehicle() || player.isRiptiding() || player.isFlying()) {
             resetState(data.getUuid());
             return;
         }
@@ -116,6 +136,33 @@ public class SimulationCheck extends Check implements PacketAware {
 
         final State st = states.computeIfAbsent(data.getUuid(), k -> new State());
         st.tickCounter++;
+
+        // Полёт на элитрах живёт по своей модели физики — отдельный предиктор.
+        if (player.isGliding()) {
+            st.wasGliding = true;
+            st.glideReleaseTick = st.tickCounter; // отметка последнего тика планирования
+            processElytra(player, data, st);
+            st.lastWasOnGround = false;
+            st.lastAirTicks = data.getAirTicks();
+            return;
+        }
+
+        // Первый тик после схода с элитр: инерция переносится в обычное движение,
+        // гасим накопленные буферы и пропускаем тик, чтобы не поймать ложный всплеск.
+        if (st.wasGliding) {
+            st.wasGliding = false;
+            st.elytraBuffer = 0F;
+            st.elytraTicks = 0;
+            st.verticalBuffer = 0F;
+            st.horizontalBuffer = 0F;
+            st.hoverTicks = 0;
+            st.driftAccumulator = 0D;
+            st.driftViolationTicks = 0;
+            st.glideReleaseTick = st.tickCounter; // начало окна распада импульса
+            st.lastWasOnGround = flying.isOnGround();
+            st.lastAirTicks = data.getAirTicks();
+            return;
+        }
 
         final double deltaY      = data.getDeltaY();
         final double lastDeltaY  = data.getLastDeltaY();
@@ -212,11 +259,24 @@ public class SimulationCheck extends Check implements PacketAware {
         st.lastAirTicks = airTicks;
     }
 
+    /** Активно ли окно распада импульса после схода с элитр. */
+    private boolean elytraReleaseActive(State st) {
+        return st.glideReleaseTick >= 0
+                && (st.tickCounter - st.glideReleaseTick) <= ELYTRA_RELEASE_GRACE_TICKS;
+    }
+
     // ─── Вертикаль ───────────────────────────────────────────────────────────
     private void processVertical(PlayerData data, State st, EnumSet<Tag> tags,
                                  double deltaY, double lastDeltaY, boolean onGround,
                                  boolean wasRecentlyOnGround, int airTicks,
                                  int levitation, int slowFalling, double jumpImpulse) {
+
+        // Остаточный вертикальный импульс элитр гасится дрэгом — не флагаем его как Fly/Hover.
+        if (elytraReleaseActive(st)) {
+            st.verticalBuffer = Math.max(0F, st.verticalBuffer - 0.2F);
+            st.hoverTicks = 0;
+            return;
+        }
 
         double predFallY;
         if (levitation > 0) {
@@ -327,6 +387,22 @@ public class SimulationCheck extends Check implements PacketAware {
             st.overSpeedTicks = 0;
             st.driftAccumulator *= 0.7D;
             return;
+        }
+
+        // Окно распада импульса после элитр: пока скорость не растёт — это легальный распад,
+        // Speed/Bhop не проверяем. Как только импульс погашен до нормы — окно закрываем.
+        // Рост скорости (ускорение) сквозь окно проходит в обычные проверки и флагается.
+        if (elytraReleaseActive(st)) {
+            if (deltaXZ <= lastDeltaXZ + 0.05D) {
+                st.horizontalBuffer = Math.max(0F, st.horizontalBuffer - 0.2F);
+                st.groundSpeedTicks = 0;
+                st.groundAccelTicks = 0;
+                st.overSpeedTicks = 0;
+                st.driftAccumulator *= 0.7D;
+                if (deltaXZ < computeMaxHorizontalSpeed(data, speedLevel) + 0.05D)
+                    st.glideReleaseTick = -9999;
+                return;
+            }
         }
 
         if (tags.contains(Tag.WALL_TOUCH)) {
@@ -476,6 +552,95 @@ public class SimulationCheck extends Check implements PacketAware {
             fail(data, "Симуляция (Speed): buf=%.3f hDiff=%.4f XZ=%.4f max=%.4f air=%d",
                     st.horizontalBuffer, hDiff, deltaXZ, maxAllowed, airTicks);
             st.horizontalBuffer = Math.min(st.horizontalBuffer, 2.0F);
+        }
+    }
+
+    // ─── Элитры (fall flying) ────────────────────────────────────────────────
+    /**
+     * Симуляция полёта на элитрах через движок {@link ElytraPredictor}. Из скорости прошлого
+     * тика и направления взгляда строится предсказанная скорость по ванильной модели; тяга
+     * фейерверка моделируется внутри предсказания, поэтому проверка работает и во время буста.
+     * <p>
+     * Три сигнала: (1) пер-тик отклонение от предсказания (эрратичные читы), (2) рост полной
+     * механической энергии без фейерверка = впрыск скорости (Boost/Speed), (3) устойчивое
+     * поддержание и высоты, и энергии = зависание/level-fly (Static/Vanilla/Pitch40Infinite).
+     */
+    private void processElytra(Player player, PlayerData data, State st) {
+        st.elytraTicks++;
+
+        final double dx = data.getDeltaX(), dy = data.getDeltaY(), dz = data.getDeltaZ();
+
+        final long now = System.currentTimeMillis();
+        boolean fireworkBoost = (now - data.getLastFireworkUse()) < ELYTRA_FIREWORK_GRACE_MS;
+        boolean warmup = st.elytraTicks <= ELYTRA_WARMUP_TICKS
+                || (now - data.getLastSetbackTime()) < TELEPORT_GRACE_MS;
+
+        // Предсказание тика по ванильной модели (с учётом тяги фейерверка, если активна).
+        st.elytraPredictor.predict(
+                data.getLastDeltaX(), data.getLastDeltaY(), data.getLastDeltaZ(),
+                data.getYaw(), data.getPitch(), fireworkBoost);
+        double pX = st.elytraPredictor.getPredictedDeltaX();
+        double pY = st.elytraPredictor.getPredictedDeltaY();
+        double pZ = st.elytraPredictor.getPredictedDeltaZ();
+
+        double devX = dx - pX, devY = dy - pY, devZ = dz - pZ;
+        double dev = Math.sqrt(devX * devX + devY * devY + devZ * devZ);
+
+        // Полная механическая энергия на единицу массы: KE + PE.
+        double energy = 0.5D * (dx * dx + dy * dy + dz * dz) + PhysicsConstants.ELYTRA_GRAVITY * data.getY();
+
+        // Первые тики после взлёта/сетбэка — реконструкция шумит, только копим базу.
+        if (warmup) {
+            st.elytraBuffer = Math.max(0F, st.elytraBuffer - 0.5F);
+            st.elytraEnergyPrev = energy;
+            st.elytraLevelTicks = 0;
+            return;
+        }
+
+        double dE = energy - st.elytraEnergyPrev;
+        st.elytraEnergyPrev = energy;
+
+        // Во время буста фейерверка энергия и высота легально растут — проверки off.
+        if (fireworkBoost) {
+            st.elytraBuffer     = Math.max(0F, st.elytraBuffer - 0.5F);
+            st.elytraLevelTicks = Math.max(0, st.elytraLevelTicks - 3);
+            return;
+        }
+
+        // ── (1) Рост энергии без фейерверка = впрыск скорости (Boost/Speed) ───
+        // Без фейерверка полная механическая энергия обязана убывать (drag). Копим
+        // избыток по нескольким тикам — единичный шум/пропуск детекта не флагает.
+        // Вектор-отклонение (dev) для элитр не используется: на виражах рассинхрон
+        // угла обзора даёт большой dev даже на легите. Идёт только в лог.
+        double excessEnergy = Math.max(0.0D, dE - 0.015D);
+        if (excessEnergy > 0.0D) {
+            // Вклад за тик ограничен — один всплеск (напр. 1-тик разрыв детекта фейерверка
+            // на старте буста) не пробивает порог; нужен устойчивый набор энергии.
+            st.elytraBuffer += Math.min(0.5F, (float) (excessEnergy * 8.0D));
+        } else {
+            st.elytraBuffer = Math.max(0F, st.elytraBuffer - 0.3F);
+        }
+        if (st.elytraBuffer >= ELYTRA_FLAG_THRESHOLD) {
+            fail(data, "Симуляция (Elytra/Energy): buf=%.3f dE=%.4f dev=%.4f speed=%.3f dy=%.4f pitch=%.1f",
+                    st.elytraBuffer, dE, dev, Math.sqrt(dx * dx + dz * dz), dy, data.getPitch());
+            st.elytraBuffer = Math.min(st.elytraBuffer, 2.5F);
+        }
+
+        // ── (2) Устойчивое поддержание высоты и энергии ──────────────────────
+        // Одновременно держать и скорость, и высоту без фейерверка невозможно —
+        // ловит Static-hover / Vanilla level-fly / Pitch40Infinite.
+        double horiz = Math.sqrt(dx * dx + dz * dz);
+        boolean maintainingAltitude = dy > -0.015D;   // высота практически не падает
+        boolean notBleedingEnergy   = dE > -0.003D;    // энергия практически не убывает
+        if (horiz > 0.12D && maintainingAltitude && notBleedingEnergy) {
+            st.elytraLevelTicks++;
+        } else {
+            st.elytraLevelTicks = Math.max(0, st.elytraLevelTicks - 3);
+        }
+        if (st.elytraLevelTicks >= 30) {
+            fail(data, "Симуляция (Elytra/Sustain): lvlTicks=%d dE=%.4f horiz=%.3f dy=%.4f pitch=%.1f",
+                    st.elytraLevelTicks, dE, horiz, dy, data.getPitch());
+            st.elytraLevelTicks = 10; // не спамим, но продолжаем ловить
         }
     }
 
@@ -657,6 +822,12 @@ public class SimulationCheck extends Check implements PacketAware {
             st.driftAccumulator = 0;
             st.driftViolationTicks = 0;
             st.sprintJumpTick = -999;
+            st.elytraBuffer = 0F;
+            st.elytraTicks = 0;
+            st.wasGliding = false;
+            st.glideReleaseTick = -9999;
+            st.elytraEnergyPrev = 0D;
+            st.elytraLevelTicks = 0;
         }
     }
 
@@ -669,5 +840,11 @@ public class SimulationCheck extends Check implements PacketAware {
     @Override
     protected double getViolationAmount() {
         return 1.0;
+    }
+
+    // Проверка сама моделирует полёт на элитрах — планирование её не освобождает.
+    @Override
+    public boolean allowDuringGliding() {
+        return true;
     }
 }

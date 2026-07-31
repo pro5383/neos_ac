@@ -71,6 +71,15 @@ public abstract class Check {
         return 1.0;
     }
 
+    /**
+     * Должна ли проверка выполняться, пока игрок планирует на элитрах.
+     * По умолчанию нет (планирование глобально освобождено). Проверки с собственной
+     * моделью полёта на элитрах переопределяют на {@code true}.
+     */
+    public boolean allowDuringGliding() {
+        return false;
+    }
+
     public String getName() {
         return name;
     }

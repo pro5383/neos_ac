@@ -175,7 +175,8 @@ public class PacketHandler {
         }
 
         plugin.getCheckManager().getChecks().forEach(check -> {
-            if (check.isEnabled() && !plugin.getExemptionManager().isExempt(data)) {
+            if (check.isEnabled()
+                    && !plugin.getExemptionManager().isExempt(data, false, check.allowDuringGliding())) {
                 try {
                     if (check instanceof PacketAware packetAware) {
                         packetAware.onFlying(player, data, flying);

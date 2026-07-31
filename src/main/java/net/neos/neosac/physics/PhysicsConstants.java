@@ -46,4 +46,15 @@ public final class PhysicsConstants {
 
     // Ключевое масштабирование ввода клавиш перед нормализацией
     public static final double KEY_SCALE = 0.98D;
+
+    // --- Элитры (fall flying / gliding) ---
+    // Ванильная модель полёта на элитрах (LivingEntity#travel, ветка isFallFlying).
+    public static final double ELYTRA_GRAVITY   = 0.08D;   // базовая гравитация за тик
+    public static final double ELYTRA_LIFT      = 0.06D;   // подъём от cos²(pitch)
+    public static final double ELYTRA_PITCH_GAIN= 0.04D;   // набор высоты при задранном носе
+    public static final double ELYTRA_DIVE_GAIN = 0.1D;    // разгон при пикировании
+    public static final double ELYTRA_TURN      = 0.1D;    // доводка вектора скорости к взгляду
+    public static final double ELYTRA_DRAG_Y    = 0.98D;
+    public static final double ELYTRA_DRAG_XZ   = 0.99D;
+    public static final double ELYTRA_LOOK_NORM = 0.4D;    // нормировка длины вектора взгляда
 }

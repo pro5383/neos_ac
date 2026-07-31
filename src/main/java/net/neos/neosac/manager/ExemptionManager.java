@@ -24,10 +24,14 @@ public class ExemptionManager {
     }
 
     public boolean isExempt(PlayerData data) {
-        return isExempt(data, false);
+        return isExempt(data, false, false);
     }
 
     public boolean isExempt(PlayerData data, boolean ignoreVehicle) {
+        return isExempt(data, ignoreVehicle, false);
+    }
+
+    public boolean isExempt(PlayerData data, boolean ignoreVehicle, boolean ignoreGliding) {
         if (data == null || data.getPlayer() == null) return true;
         Player player = data.getPlayer();
 
@@ -38,7 +42,7 @@ public class ExemptionManager {
 
         if (player.isFlying() || player.getAllowFlight()) return true;
 
-        if (player.isGliding()) return true;
+        if (!ignoreGliding && player.isGliding()) return true;
 
         if (player.isRiptiding()) return true;
 
